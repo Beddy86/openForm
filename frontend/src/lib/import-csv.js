@@ -232,6 +232,28 @@ const ALIAS_EX = {
   // Cardio again: the only candidates in a 29-entry cardio vocabulary.
   'jumping jack': '3220', 'jumping jacks': '3220', 'battle ropes': '0128',
   'stair machine (steps)': '2311', 'stair machine': '2311',
+  // Motra's vocabulary (xlsx export converted to the Strong layout). Motra writes "Machine"
+  // where the catalogue says "lever"/"sled", and names cable attachments explicitly.
+  'barbell forearm curl': '0126', 'dumbbell forearm curl': '0401',
+  'barbell overhead press / military press': '0091', 'barbell seated shoulder press': '0091',
+  'dumbbell shoulder press': '0405',
+  'cable bar straight arm pull down': '0238', 'cable rope straight arm pull down': '0237',
+  'cable chest press': '0151', 'cable fly high': '1269', 'cable fly mid': '1269',
+  'cable lat pull down wide-grip': '2291', 'cable lat pull down wide hammer': '2291',
+  'cable lat pull down v-grip (narrow hammer)': '2616',
+  'cable rope bicep curl': '3068', 'cable rope tricep pushdown / extension': '0200',
+  'cable v-handle seated row': '2661',
+  'hack squat (facing out)': '0743',
+  'leg / hamstring curl seated': '0599',
+  'leg press calf raise': '1391',
+  'machine decline bench press': '1300', 'machine incline bench press': '1299',
+  'machine seated chest press': '0576', 'machine hammer-grip seated chest press': '0576',
+  'machine fly (pec dec)': '1030',
+  'machine row': '1350', 'machine hammer-grip row': '0588',
+  'machine hip abduction': '0597', 'machine hip adduction': '0598',
+  'machine leg press': '2267', 'machine leg press (moving chair)': '2267',
+  'machine seated back extension': '0573', 'machine tricep extension': '0607',
+  'v-sit': '3622',
 }
 
 let ALIAS_IDX = null
