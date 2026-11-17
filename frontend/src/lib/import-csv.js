@@ -258,6 +258,8 @@ const ALIAS_EX = {
   'arme 3a': '0607', 'arme 3a trizeps': '0607',
   'beine 2a': '0599', 'beine 2a beinbeuger': '0599',
   'brust 2a': '0576', 'brust 2a bankdrückmaschine': '0576',
+  'rücken 3': '0602', 'rücken 3 reverse butterfly': '0602', 'reverse butterfly': '0602',
+  'wadenheber sitzend': '2666', 'seated calf raise machine': '2666',
 }
 
 let ALIAS_IDX = null
