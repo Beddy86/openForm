@@ -81,3 +81,57 @@ export async function importCodeFromImageWeb(file) {
   }
   try { return await decodeSource(bmp) } finally { if (bmp.close) bmp.close() }
 }
+
+// Live camera scan for the browser build (installed PWA on iOS/Android). The native app hands this
+// to ML Kit; a browser has no scanner UI, so we show our own full-screen overlay: getUserMedia →
+// <video> → decodeSource() every ~200 ms until a QR is found or the user cancels.
+// Resolves { value, fmt } | null (cancelled). Rejects when the camera can't be opened, so callers
+// show their "camera not available" message.
+export async function scanCodeWeb() {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) throw new Error('camera-unsupported')
+  // iOS needs this call to come out of a tap handler — it does, the caller is a button's onClick.
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
+  return new Promise(resolve => {
+    let done = false, timer = null
+    const root = document.createElement('div')
+    root.setAttribute('role', 'dialog')
+    root.setAttribute('aria-label', 'QR-Code scannen')
+    root.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;'
+    const video = document.createElement('video')
+    video.setAttribute('playsinline', ''); video.setAttribute('muted', ''); video.muted = true; video.autoplay = true
+    video.style.cssText = 'width:100%;height:100%;object-fit:cover;'
+    const hint = document.createElement('div')
+    hint.textContent = 'QR-Code in den Bildausschnitt halten'
+    hint.style.cssText = 'position:absolute;top:max(env(safe-area-inset-top),20px);left:0;right:0;text-align:center;color:#fff;font:600 16px -apple-system,system-ui,sans-serif;text-shadow:0 1px 4px #000;'
+    const frame = document.createElement('div')
+    frame.style.cssText = 'position:absolute;width:62vmin;height:62vmin;border:3px solid #30d158;border-radius:22px;box-shadow:0 0 0 100vmax rgba(0,0,0,.35);pointer-events:none;'
+    const close = document.createElement('button')
+    close.textContent = 'Abbrechen'
+    close.style.cssText = 'position:absolute;bottom:max(env(safe-area-inset-bottom),28px);padding:14px 34px;border:0;border-radius:999px;background:#fff;color:#000;font:600 17px -apple-system,system-ui,sans-serif;'
+    root.append(video, frame, hint, close)
+    document.body.appendChild(root)
+
+    const finish = value => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      stream.getTracks().forEach(t => t.stop())
+      root.remove()
+      resolve(value)
+    }
+    close.onclick = () => finish(null)
+    video.srcObject = stream
+    video.play().catch(() => {})
+    const tick = async () => {
+      if (done) return
+      try {
+        if (video.readyState >= 2) {
+          const hit = await decodeSource(video)
+          if (hit && hit.value) { finish(hit); return }
+        }
+      } catch (e) { /* try the next frame */ }
+      timer = setTimeout(tick, 200)
+    }
+    tick()
+  })
+}

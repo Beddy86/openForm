@@ -32,7 +32,7 @@ function toCode(barcode) {
 // the user backed out without scanning. Throws if scanning isn't supported or permission is hard-
 // denied so the caller can explain why.
 export async function scanCode() {
-  if (!MOBILE) throw new Error('Scanning is only available in the app')
+  if (!MOBILE) return (await import('./scan-web.js')).scanCodeWeb()
   const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
 
   const { supported } = await BarcodeScanner.isSupported()

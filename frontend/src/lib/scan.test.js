@@ -7,8 +7,8 @@ import { scanCode, importCodeFromImage } from './scan.js'
 // hand; the browser decoder has its own round-trip test in scan-web.test.js.)
 
 describe('scan off mobile', () => {
-  it('scanCode rejects — the native scanner is app-only', async () => {
-    await expect(scanCode()).rejects.toThrow(/only available in the app/)
+  it('scanCode takes the browser path and rejects when there is no camera API', async () => {
+    await expect(scanCode()).rejects.toThrow(/camera-unsupported/)
   })
 
   it('importCodeFromImage takes the browser path and is a no-op without a file', async () => {
