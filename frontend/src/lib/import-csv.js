@@ -254,6 +254,10 @@ const ALIAS_EX = {
   'machine leg press': '2267', 'machine leg press (moving chair)': '2267',
   'machine seated back extension': '0573', 'machine tricep extension': '0607',
   'v-sit': '3622',
+  // gym80 machine labels (as printed on the device stickers), e.g. in studio exports or notes.
+  'arme 3a': '0607', 'arme 3a trizeps': '0607',
+  'beine 2a': '0599', 'beine 2a beinbeuger': '0599',
+  'brust 2a': '0576', 'brust 2a bankdrückmaschine': '0576',
 }
 
 let ALIAS_IDX = null
