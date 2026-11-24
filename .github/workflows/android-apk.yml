@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Projekt laden
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # inspect only our own historical media snapshots
 
       - name: Projektstruktur pruefen
         shell: bash
@@ -61,27 +63,61 @@ jobs:
 
       - name: Ernaehrung, Backup und Navigation testen
         working-directory: frontend
-        run: node --test src/lib/nutrition.test.mjs src/lib/nutrition-extra.test.mjs src/components/TabBar.openform.test.mjs src/lib/openform-backup.test.mjs src/lib/openform-integrated-ui.test.mjs src/lib/backup-review.test.mjs src/lib/nutrition-navigation.test.mjs src/lib/nutrition-032.test.mjs src/lib/nutrition-micros.test.mjs src/lib/coach-nutrition.test.mjs src/lib/training-energy.test.mjs src/lib/openform-recovery.test.mjs src/lib/nutrition-035.test.mjs src/lib/smart-rest.test.mjs src/lib/rest-circle.test.mjs src/lib/progression-review.test.mjs src/lib/illness.test.mjs src/lib/illness-sync.test.mjs src/lib/illness-ui.test.mjs src/lib/appearance-illness.test.mjs src/lib/illness-burden.test.mjs src/lib/body-development.test.mjs src/lib/body-development-ui.test.mjs src/lib/gym-device-pass.test.mjs src/lib/occupied-alternatives.test.mjs src/lib/fitness-qr-nutrition.test.mjs src/lib/gym-scan-go.test.mjs src/lib/gym-qr-recognition.test.mjs src/lib/android-release-audit.test.mjs
+        run: node --test src/lib/nutrition.test.mjs src/lib/nutrition-extra.test.mjs src/components/TabBar.openform.test.mjs src/lib/openform-backup.test.mjs src/lib/openform-integrated-ui.test.mjs src/lib/backup-review.test.mjs src/lib/nutrition-navigation.test.mjs src/lib/nutrition-032.test.mjs src/lib/nutrition-micros.test.mjs src/lib/coach-nutrition.test.mjs src/lib/training-energy.test.mjs src/lib/openform-recovery.test.mjs src/lib/nutrition-035.test.mjs src/lib/height-reps.test.mjs src/lib/machine-reps.test.mjs src/lib/smart-rest.test.mjs src/lib/rest-circle.test.mjs src/lib/progression-review.test.mjs src/lib/illness.test.mjs src/lib/illness-sync.test.mjs src/lib/illness-ui.test.mjs src/lib/appearance-illness.test.mjs src/lib/illness-burden.test.mjs src/lib/body-development.test.mjs src/lib/body-development-ui.test.mjs src/lib/gym-device-pass.test.mjs src/lib/occupied-alternatives.test.mjs src/lib/fitness-qr-nutrition.test.mjs src/lib/gym-scan-go.test.mjs src/lib/gym-qr-recognition.test.mjs src/lib/android-release-audit.test.mjs src/lib/post-workout-analysis.test.mjs src/lib/media-url.test.mjs src/lib/media-origin-safety.test.mjs
 
       - name: Hybrid-Ernährungssuche testen
         working-directory: frontend
         run: npx vitest run src/lib/nutrition-hybrid.test.js src/lib/nutrition-photo.test.js src/lib/supplement-reminders.test.js src/lib/nutrition-native-backup.test.js src/lib/update.test.js src/components/Media.test.jsx src/lib/back.test.js
 
-      - name: Kostenlose RepDB Uebungsbilder fuer APK laden
+      # For the user's non-commercial fork, retain 180px openGym media unchanged,
+      # with the original Gym visual notice. Pin source; never commit assets here.
+      # Keep the legacy own-history restore check, but the new official
+      # pinned source below is the actual source for images and clips.
+      - name: Urspruengliche openForm-Bilder aus eigener Git-Historie wiederfinden
+        shell: bash
+        env:
+          OPENFORM_NONCOMMERCIAL_FORK_RESTORE: '1'
+        run: node scripts/catalogue/recover-fork180-history.mjs "$RUNNER_TEMP/openform-retained-media"
+
+      - name: Originale openGym-Bilder und Clips holen
+        uses: actions/checkout@v4
+        with:
+          repository: DuarteSantos8/openGym
+          ref: e4a68a94c42a3c17cbd560d66ce2e46a7048ab99
+          path: .openform-source
+          sparse-checkout: |
+            catalogue/media
+          sparse-checkout-cone-mode: false
+          filter: blob:none
+          persist-credentials: false
+
+      - name: Medienquelle und Copyright-Hinweis kontrollieren
         shell: bash
         run: |
           set -euo pipefail
-          git clone --depth 1 https://github.com/RepDB/exercise-dataset.git "$RUNNER_TEMP/repdb"
-          node scripts/catalogue/stage-repdb.mjs "$RUNNER_TEMP/repdb"
-          test "$(find frontend/public/exercise-media/repdb -name '*.webp' | wc -l)" -ge 10
+          test -f .openform-source/catalogue/media/NOTICE.md
+          test -d .openform-source/catalogue/media/still
+          test -d .openform-source/catalogue/media/clip
+          grep -Eiq 'Gym visual|Aliaksandr Makatserchyk' .openform-source/catalogue/media/NOTICE.md
+          originals=$(find .openform-source/catalogue/media/still -maxdepth 1 -type f -name '*.webp' | wc -l)
+          clips=$(find .openform-source/catalogue/media/clip -maxdepth 1 -type f -name '*.mp4' | wc -l)
+          echo "Offizielle Originalmedien: $originals Bilder und $clips Animationen"
+          test "$originals" -ge 6000 && test "$clips" -ge 6000
 
-      - name: RepDB Zuordnungsbericht hochladen
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: repdb-coverage
-          path: repdb-coverage.json
-          if-no-files-found: warn
+      - name: Originalbilder und Animationen offline einbauen
+        shell: bash
+        env:
+          OPENFORM_FORK180_SOURCE: '.openform-source/catalogue/media'
+          OPENFORM_FORK180_LICENSE_CONFIRMED: '1'
+          OPENFORM_FORK180_CLIPS_LICENSE_CONFIRMED: '1'
+        run: |
+          set -euo pipefail
+          node scripts/catalogue/stage-fork180.mjs
+          test "$(find frontend/public/exercise-media/fork180 -maxdepth 1 -type f -name '*.webp' | wc -l)" -gt 4000
+          test "$(find frontend/public/exercise-media/fork180/clip -maxdepth 1 -type f -name '*.mp4' | wc -l)" -gt 4000
+
+      - name: Offline-Medien Regressionstests
+        run: node --test scripts/catalogue/stage-fork180.test.mjs
 
       - name: Mobile Web-App bauen
         working-directory: frontend
@@ -89,11 +125,11 @@ jobs:
           VITE_MOBILE: '1'
         run: npm run build
 
-      - name: RepDB-Bildzuordnung und Mobile-Bundle validieren
+      - name: OpenGym-IDs und optionale Medienpruefung
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/catalogue/verify-repdb-bundle.mjs
+          node scripts/catalogue/verify-fork180-bundle.mjs
 
       - name: Capacitor Android synchronisieren
         working-directory: frontend
@@ -145,26 +181,6 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Optionale Gym-Medien in APK pruefen
-        shell: bash
-        run: |
-          set -euo pipefail
-          apk="frontend/android/app/build/outputs/apk/debug/app-debug.apk"
-          if [ -d frontend/dist/exercise-media/still ]; then
-            expected=$(find frontend/dist/exercise-media/still -maxdepth 1 -type f -name '*.webp' | wc -l)
-          else
-            expected=0
-          fi
-          actual=$(unzip -Z1 "$apk" | grep -Ec '^assets/public/exercise-media/still/[^/]+[.]webp$' || true)
-          echo "Gym-Bilder im APK: $actual von $expected"
-          if [ "$actual" -ne "$expected" ]; then
-            echo "::error::Vorhandene Gym-Bilder wurden nicht vollstaendig ins APK gepackt."
-            exit 1
-          fi
-          if [ "$expected" -eq 0 ]; then
-            echo "::warning::APK enthaelt keine Gym-Bilder; Medien muessen separat und rechtmaessig bereitgestellt werden."
-          fi
-
       - name: APK-Signatur und Paket-Identität prüfen
         shell: bash
         run: |
@@ -196,16 +212,27 @@ jobs:
             exit 1
           fi
 
-      - name: RepDB Bilder im APK pruefen
+      - name: Originalbilder im APK nur bei Freigabe prüfen
         shell: bash
         run: |
           set -euo pipefail
           apk="frontend/android/app/build/outputs/apk/debug/app-debug.apk"
-          expected=$(find frontend/public/exercise-media/repdb -type f -name '*.webp' | wc -l)
-          actual=$(unzip -Z1 "$apk" | grep -Ec '^assets/public/exercise-media/repdb/[^/]+[.]webp$' || true)
-          echo "RepDB Stills: $actual / $expected"
-          test "$expected" -ge 10
-          test "$expected" -eq "$actual" || { echo "::error::RepDB images missing in APK"; exit 1; }
+          if unzip -Z1 "$apk" | grep -Eq '^assets/public/exercise-media/repdb/'; then
+            echo "::error::RepDB-Bilder duerfen nicht mehr in der APK sein"
+            exit 1
+          fi
+          expected=0
+          if [ -d frontend/dist/exercise-media/fork180 ]; then
+            expected=$(find frontend/dist/exercise-media/fork180 -maxdepth 1 -name '*.webp' -type f | wc -l)
+          fi
+          actual=$(unzip -Z1 "$apk" | grep -Ec '^assets/public/exercise-media/fork180/[^/]+[.]webp$' || true)
+          echo "Freigegebene original-ID-Bilder im APK: $actual / $expected"
+          test "$actual" -eq "$expected" || { echo "::error::Originalbilder fehlen in der APK"; exit 1; }
+          test "$expected" -gt 4000 || { echo "::error::Originalbilder fehlen im Paket"; exit 1; }
+          expected_clips=$(find frontend/dist/exercise-media/fork180/clip -maxdepth 1 -type f -name '*.mp4' | wc -l)
+          actual_clips=$(unzip -Z1 "$apk" | grep -Ec '^assets/public/exercise-media/fork180/clip/[^/]+[.]mp4$' || true)
+          echo "Originalanimationen im APK: $actual_clips / $expected_clips"
+          test "$expected_clips" -gt 4000 && test "$actual_clips" -eq "$expected_clips" || { echo "::error::Originalanimationen fehlen im APK"; exit 1; }
 
       - name: APK als Artifact hochladen
         uses: actions/upload-artifact@v4

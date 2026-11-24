@@ -12,7 +12,9 @@ openForm vereint openGym als technische Basis mit einem neu implementierten Ern�
 
 ### Lizenzhinweis: Übungsmedien
 
-Die Dateien `catalogue/media/still` und `catalogue/media/clip` sind **NICHT** enthalten. Ihr ursprünglicher Rechteinhaber lizenziert sie gesondert nur für die openGym-App; sie dürfen nicht ohne eigene Lizenz in einer unabhängigen Anwendung wie openForm eingebunden werden. Daher fehlen in dieser Alpha einige Übungsbilder und Animationen. Ersetze sie erst nach Erwerb entsprechender Rechte oder durch eigenes Material. Weitere Hinweise stehen in `NOTICE.md`.
+Die originalen Gym-visual-Medien sind **nicht Teil der AGPL-Code-Lizenz**. openGym erlaubt laut seiner [aktuellen NOTICE](https://github.com/DuarteSantos8/openGym/blob/main/NOTICE.md) einem **nichtkommerziellen openGym-Fork**, dessen unveränderte Medien bis maximal **180 × 180 Pixel** zusammen mit dem Rechtehinweis beizubehalten. Größere APK-Medien, kommerzielle Nutzung und Weiterverwendung als KI-Trainings- oder Bildgenerierungsvorlage sind davon nicht abgedeckt. Ob eine spätere Wiederaufnahme entfernter Medien in der eigenständig benannten openForm-App unter die Fork-Ausnahme fällt, sollte mit dem Rechteinhaber schriftlich geklärt werden.
+
+Die Android-Beta verwendet ab jetzt **keine RepDB-Bilder mehr**. Die UI verwendet nur ausdrücklich freigegebene, unveränderte 180-Pixel-Fork-Medien anhand der **ursprünglichen openGym-Übungs-ID**, sowie private Übungsfotos. Ohne berechtigte Originalmedienquelle erscheint ein neutraler Bildplatzhalter; die Übung, deine A/B/C-Routinen und Trainingshistorie bleiben unverändert. Ein strikt opt-in-fähiger 180-Pixel-Fork-Import ist vorbereitet, setzt aber eine rechtmäßig vorhandene Quelle und bewusste Lizenzbestätigung voraus. Die Schritte und Einschränkungen stehen in [docs/FORK180_MEDIA_REVIEW.md](docs/FORK180_MEDIA_REVIEW.md).
 
 ## Installation / GitHub
 
@@ -30,8 +32,6 @@ Das neue Ernährungsmodul verwendet separate lokale Daten; es ist noch nicht Tei
 
 Technische Grundlage: openGym (AGPL-3.0-or-later); `LICENSE`, `NOTICE.md` und Urheberrechtshinweise bleiben bestehen. OpenNutriTracker-Dart-Code wurde nicht kopiert. Die Nutrition-Funktionen sind eine neue React-Implementierung.
 
-## Lizenzhinweis: kostenlose RepDB-Übungsbilder
+## Bildzuordnung ohne Datenmigration
 
-Die Android-Beta lädt beim Build passende statische WebP-Illustrationen aus dem kostenlosen RepDB-Datensatz. Nur eindeutig nach Übungsname und Gerät zuordenbare Bilder werden eingebaut; Trainingsdaten und IDs bleiben unverändert. Die Bilder sind nicht Teil dieses GitHub-Repositories und die RepDB-Lizenz erlaubt keine Weiterveröffentlichung als eigenständiger Datensatz. Der Import enthält keine bezahlten Animations-Samples.
-
-**Exercise data by [RepDB (repdb.co)](https://repdb.co).** Lizenz: https://github.com/RepDB/exercise-dataset/blob/main/LICENSE-DATA.md
+RepDB ist seit dem Medienwechsel weder Bildquelle noch Bestandteil des Android-Builds. Der Katalog und die gespeicherten Übungen werden nicht migriert oder verändert. Die originalen Bilder werden **nicht automatisch** aus openGym heruntergeladen: Ihre Nutzung setzt eine rechtmäßig verfügbare Medienquelle und eine geklärte Berechtigung voraus. Siehe [docs/FORK180_MEDIA_REVIEW.md](docs/FORK180_MEDIA_REVIEW.md).

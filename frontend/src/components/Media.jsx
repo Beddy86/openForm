@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
-import { isCustomEx } from '../lib/exercises.js'
-import REPDB_IMAGE_MAP from '../lib/repdb-image-map.json'
+import { isCustomEx, figureOf } from '../lib/exercises.js'
+import FORK180_IMAGE_MAP from '../lib/fork180-image-map.json'
+import FORK180_CLIP_MAP from '../lib/fork180-clip-map.json'
+import FORK180_FIGURE_MAP from '../lib/fork180-figure-map.json'
+import { exerciseStillUrl, exerciseClipUrl, selectFigureMediaFile } from '../lib/media-url.js'
 import { MOBILE } from '../lib/mobile.js'
 import { useStore } from '../store/useStore.js'
 import { t, exerciseNameFor } from '../lib/i18n.js'
@@ -53,19 +56,57 @@ function ExerciseMediaWithOverride(p) {
 // (gifSize 'off') — then nothing renders here and the exercise card closes up, exactly like
 // an exercise without media. Any other/legacy value behaves as 'full'.
 // Built-in exercises no longer use the outdated openGym GIF/MP4 paths.
-// RepDB is the only bundled illustration fallback; users can override it locally.
+// Images are keyed by the original openGym exercise ID. No catalog substitution.
 function BuiltinMedia({ ex, id, compact, minimizable }) {
   const gifSize = useStore(s => s.S.gifSize)
-  const src = REPDB_IMAGE_MAP[ex?.id] ? 'exercise-media/repdb/' + REPDB_IMAGE_MAP[ex.id] : null
-  const [failed, setFailed] = useState(false)
-  useEffect(() => setFailed(false), [src])
-  if (minimizable && (gifSize === 'off' || !src)) return null
+  const figure = useStore(s => figureOf(s.S))
+  const update = useStore(s => s.update)
+  const stillFile = selectFigureMediaFile(ex, figure, FORK180_IMAGE_MAP[ex?.id], FORK180_FIGURE_MAP, 'still')
+  const clipFile = selectFigureMediaFile(ex, figure, FORK180_CLIP_MAP[ex?.id], FORK180_FIGURE_MAP, 'clip')
+  const stillSrc = stillFile ? exerciseStillUrl('fork180', stillFile) : null
+  const clipSrc = clipFile ? exerciseClipUrl('fork180', clipFile) : null
+  const [playing, setPlaying] = useState(true)
+  const [stillFailed, setStillFailed] = useState(false)
+  const [clipFailed, setClipFailed] = useState(false)
+  useEffect(() => {
+    setPlaying(!(typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches))
+    setStillFailed(false)
+    setClipFailed(false)
+  }, [stillSrc, clipSrc])
+  const showStill = !!stillSrc && !stillFailed
+  const showClip = !!clipSrc && !clipFailed && (playing || !showStill)
+  const isVideo = showClip && /\.mp4$/i.test(clipSrc)
+  // Android's local server seeks poorly: use the existing bounded clip memory cache.
+  const cachedClip = useClipInMemory(isVideo ? clipSrc : null)
+  // Never start an unbuffered Capacitor video while the local source is being read:
+  // a seek at the loop boundary can stall for several seconds. Show the still first.
+  const videoReadySrc = isVideo ? (MOBILE ? cachedClip : clipSrc) : null
+  if (minimizable && (gifSize === 'off' || (!stillSrc && !clipSrc))) return null
   const mini = minimizable && gifSize === 'mini'
-  if (!src || failed) return minimizable ? null : <div className="exmedia broken" id={id}>
+  if (!showClip && !showStill) return minimizable ? null : <div className="exmedia broken" id={id}>
     <div className="exmedia-x" role="status"><Icon name="image" /><span>Kein Übungsbild vorhanden. Unten eigenes Bild hinzufügen.</span></div>
   </div>
-  return <div className={'exmedia' + (compact ? ' compact' : '') + (mini ? ' mini' : '')} id={id}>
-    <img src={src} decoding="async" alt={exerciseNameFor(ex)} onError={() => setFailed(true)} />
+  const canToggle = showStill && !!clipSrc && !clipFailed
+  const toggle = () => { if (canToggle) setPlaying(v => !v) }
+  const toggleSize = e => {
+    e.stopPropagation()
+    update(s => { s.gifSize = mini ? 'full' : 'mini' })
+  }
+  return <div className={'exmedia' + (compact ? ' compact' : '') + (mini ? ' mini' : '')} id={id}
+    role={canToggle ? 'button' : undefined} tabIndex={canToggle ? 0 : undefined}
+    onClick={canToggle ? toggle : undefined}
+    onKeyDown={canToggle ? e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } } : undefined}>
+    {isVideo && videoReadySrc
+      ? <video src={videoReadySrc}
+          autoPlay muted playsInline loop preload="metadata" ref={autoplayMuted}
+          onError={() => setClipFailed(true)} />
+      : <img src={showClip && !isVideo ? clipSrc : stillSrc} decoding="async" alt={exerciseNameFor(ex)}
+          onError={() => showClip && !isVideo ? setClipFailed(true) : setStillFailed(true)} />}
+    {minimizable && <button className="giftoggle" onClick={toggleSize}
+      aria-label={mini ? 'Übungsbild vergrößern' : 'Übungsbild verkleinern'}>
+      <Icon name={mini ? 'expand' : 'minimize'} />{mini ? 'Vergrößern' : 'Verkleinern'}
+    </button>}
+    {canToggle && <span className="gifhint">{showClip ? 'Tippen zum Pausieren' : 'Tippen zum Abspielen'}</span>}
   </div>
 }
 
@@ -139,7 +180,9 @@ function ExerciseThumbWithOverride(p) {
   return isCustomEx(p.ex) ? <CustomThumb {...p} /> : <BuiltinThumb {...p} />
 }
 function BuiltinThumb({ ex }) {
-  const src = REPDB_IMAGE_MAP[ex?.id] ? 'exercise-media/repdb/' + REPDB_IMAGE_MAP[ex.id] : null
+  const figure = useStore(s => figureOf(s.S))
+  const file = selectFigureMediaFile(ex, figure, FORK180_IMAGE_MAP[ex?.id], FORK180_FIGURE_MAP, 'still')
+  const src = file ? exerciseStillUrl('fork180', file) : null
   const [broken, setBroken] = useState(null)
   if (!src || broken === src) return <div className="thumb thumb-x"><Icon name="dumbbell" /></div>
   return <img className="thumb" loading="lazy" decoding="async" draggable={false} src={src} alt="" onError={() => setBroken(src)} />
